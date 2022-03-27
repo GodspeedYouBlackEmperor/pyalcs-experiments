@@ -18,6 +18,7 @@ Install development versions of PyALCS and OpenAI Gym
     
     cd PATH_TO_OPENAIGYM_ENVS/
     python setup.py develop
+    cd ../openai-envs && python setup.py develop && cd ../pyalcs-experiments
 
 By doing so the PYTHONPATH from the `pyalcs-experiments` environment will point to local directories.
 

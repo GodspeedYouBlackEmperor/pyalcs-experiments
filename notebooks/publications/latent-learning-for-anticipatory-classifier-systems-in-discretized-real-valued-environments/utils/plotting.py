@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
-import pandas as pd
 from matplotlib.patches import Circle, RegularPolygon
 from matplotlib.path import Path
 from matplotlib.projections import register_projection

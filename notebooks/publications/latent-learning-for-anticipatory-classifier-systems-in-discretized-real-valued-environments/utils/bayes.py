@@ -39,7 +39,7 @@ def bayes_estimate(data: np.ndarray, draws=3000):
     return trace
 
 
-def compare_two_classifiers(df, cl1, cl2, draws=3000):
+def compare_two_classifiers(df, cl1, cl2, draws=100_000):
     data_1 = extract_steps(df, cl1)
     data_2 = extract_steps(df, cl2)
 
