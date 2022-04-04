@@ -23,7 +23,7 @@ BITS = 11 # 6 | 11 | 20 | 37
 MPX = f'boolean-multiplexer-{BITS}bit-v0'
 EXPLORE_TRIALS = 10000
 EXPLOIT_TRIALS = 1000
-METRICS_FREQUENCY = 100
+METRICS_FREQUENCY = 10
 KNOWLEDGE_STATE_SAMPLES = 1000 # applies only when 20 or 37 bits, otherwise all possible states verified
 
 # The size of ER replay memory buffer
