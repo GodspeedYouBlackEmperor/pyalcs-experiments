@@ -36,7 +36,7 @@ ER_SAMPLES_NUMBER_LIST = [1,2,3,5,8,13]
 #######
 
 REPEAT_START = 1
-REPEAT = 1
+REPEAT = 2
 
 EXPERIMENT_NAME = "5" # Please edit if running new experiment to do not override saved results.
 DATA_BASE_PATH = "" # CURRENT LOCATION
