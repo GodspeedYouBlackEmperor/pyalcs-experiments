@@ -25,9 +25,9 @@ EXPLOIT_TRIALS = 500
 METRICS_FREQUENCY = 1
 
 # The size of ER replay memory buffer
-ER_BUFFER_SIZE = 1000
+ER_BUFFER_SIZE = 10000
 # The minimum number of samples of ER replay memory buffer to start replying samples (warm-up phase)
-ER_BUFFER_MIN_SAMPLES = 100
+ER_BUFFER_MIN_SAMPLES = 1000
 # The number of samples to be replayed druing ER phase
 ER_SAMPLES_NUMBER_LIST = [1,2,3,5,8,13]
 
