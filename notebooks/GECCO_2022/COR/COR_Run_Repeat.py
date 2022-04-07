@@ -147,3 +147,7 @@ def run_acs2er_experiments():
         print(f"START - ACS2ER - {er_samples_number}")
         _run_acs2er_experiment(er_samples_number)
         print(f"END - ACS2ER - {er_samples_number}")
+
+
+run_acs2_experiment()
+run_acs2er_experiments()
