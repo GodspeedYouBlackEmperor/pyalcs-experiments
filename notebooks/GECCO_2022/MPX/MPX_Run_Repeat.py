@@ -19,11 +19,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-BITS = 6 # 6 | 11 | 20 | 37
+BITS = 20 # 6 | 11 | 20 | 37
 MPX = f'boolean-multiplexer-{BITS}bit-v0'
 EXPLORE_TRIALS = 10000
 EXPLOIT_TRIALS = 1000
-METRICS_FREQUENCY = 10
+METRICS_FREQUENCY = 1
 KNOWLEDGE_STATE_SAMPLES = 1000 # applies only when 20 or 37 bits, otherwise all possible states verified
 
 # The size of ER replay memory buffer
@@ -38,9 +38,9 @@ ER_SAMPLES_NUMBER_LIST = [1,2,3,5,8,13]
 #######
 
 REPEAT_START = 1
-REPEAT = 10
+REPEAT = 1
 
-EXPERIMENT_NAME = "100" # Please edit if running new experiment to do not override saved results.
+EXPERIMENT_NAME = "222" # Please edit if running new experiment to do not override saved results.
 DATA_BASE_PATH = "" # CURRENT LOCATION
 DATA_PATH = os.path.join(DATA_BASE_PATH, 'MPX', EXPERIMENT_NAME, MPX)
 
@@ -107,7 +107,7 @@ else:
 
 def mpx_metrics(agent, env):
     metrics = {
-        "knowledge": mpx_knowledge(agent.population)
+        # "knowledge": mpx_knowledge(agent.population)
     }
     metrics.update(population_metrics(agent.population, env))
 
