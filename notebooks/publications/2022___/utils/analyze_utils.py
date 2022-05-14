@@ -9,15 +9,23 @@ from tabulate import tabulate
 import dill
 
 KNOWLEDGE_ATTRIBUTE = 'knowledge'
+SPECIFICITY_ATTRIBUTE = 'specificity'
 NUMEROSITY_ATTRIBUTE = 'numerosity'
 RELIABLE_ATTRIBUTE = 'reliable'
 STEPS_ATTRIBUTE = 'steps'
 REWARD_ATTRIBUTE = 'reward'
+AVG_STEPS_ATTRIBUTE = 'avg_steps'
+OPTIMAL_ATTRIBUTE = 'optimal'
+OPTIMAL_RELIABLE_ATTRIBUTE = 'optimal_reliable'
 
 KNOWLEDGE_METRIC = 'knowledge'
+SPECIFICITY_METRIC = 'specificity'
 CLASSIFIERS_METRIC = 'classifiers'
 STEPS_METRIC = 'steps'
 REWARD_METRIC = 'reward'
+AVG_STEPS_METRIC = 'avg_steps'
+OPTIMAL_METRIC = 'optimal'
+OPTIMAL_RELIABLE_METRIC = 'optimal_reliable'
 
 ACS2_NAME = 'ACS2'
 ACS2ER_NAME = 'ACS2-ER'
@@ -84,9 +92,14 @@ class Analyzer:
 
         self.metrics = {
             KNOWLEDGE_METRIC: ['Knowledge', 'EPIZOD', 'WIEDZA [%]', 'knowledge'],
+            SPECIFICITY_METRIC: ['Specificity', 'EPIZOD', 'SPECIFICITY', 'specificity'],
             CLASSIFIERS_METRIC: ['Classifiers numerosity (num) and reliable (rel)', 'EPIZOD', 'LICZBA KLASYFIKATORÓW', 'classifiers'],
             STEPS_METRIC: ['Steps', 'EPIZOD', 'LICZBA KROKÓW', 'steps'],
-            REWARD_METRIC: ['Reward', 'EPIZOD', 'NAGRODA', 'reward']
+            REWARD_METRIC: ['Reward', 'EPIZOD', 'NAGRODA', 'reward'],
+            AVG_STEPS_METRIC: ['Avg Steps', 'EPIZOD',
+                               'LICZBA KROKÓW', 'avg_steps'],
+            OPTIMAL_METRIC: ['OPTIMAL ACTIONS', 'EPIZOD', 'OPTIMAL [%]', 'optimal'],
+            OPTIMAL_RELIABLE_METRIC: ['OPTIMAL RELIABLE ACTIONS', 'EPIZOD', 'OPTIMAL [%]', 'optimal_reliable'],
         }
 
         if not os.path.isdir(self.config.RESULTS_PATH):
@@ -98,6 +111,39 @@ class Analyzer:
         def __plot_func(metrics_list, width):
             (title, x_lable, y_label, name) = self.metrics[KNOWLEDGE_METRIC]
             self.__plot_single_metric(metrics_list, title, KNOWLEDGE_ATTRIBUTE,
+                                      x_lable, y_label, name, explore_avg_win, exploit_avg_win, width)
+        self.__plot_metric(self.__get_metric_record_single,
+                           __plot_func, width or self.config.LINE_WIDTH)
+
+    def plot_optimal(self, explore_avg_win=0, exploit_avg_win=0, width=0):
+        def __plot_func(metrics_list, width):
+            (title, x_lable, y_label, name) = self.metrics[OPTIMAL_METRIC]
+            self.__plot_single_metric(metrics_list, title, OPTIMAL_ATTRIBUTE,
+                                      x_lable, y_label, name, explore_avg_win, exploit_avg_win, width)
+        self.__plot_metric(self.__get_metric_record_single,
+                           __plot_func, width or self.config.LINE_WIDTH)
+
+    def plot_optimal_reliable(self, explore_avg_win=0, exploit_avg_win=0, width=0):
+        def __plot_func(metrics_list, width):
+            (title, x_lable, y_label,
+             name) = self.metrics[OPTIMAL_RELIABLE_METRIC]
+            self.__plot_single_metric(metrics_list, title, OPTIMAL_RELIABLE_ATTRIBUTE,
+                                      x_lable, y_label, name, explore_avg_win, exploit_avg_win, width)
+        self.__plot_metric(self.__get_metric_record_single,
+                           __plot_func, width or self.config.LINE_WIDTH)
+
+    def plot_specificity(self, explore_avg_win=0, exploit_avg_win=0, width=0):
+        def __plot_func(metrics_list, width):
+            (title, x_lable, y_label, name) = self.metrics[SPECIFICITY_METRIC]
+            self.__plot_single_metric(metrics_list, title, SPECIFICITY_ATTRIBUTE,
+                                      x_lable, y_label, name, explore_avg_win, exploit_avg_win, width)
+        self.__plot_metric(self.__get_metric_record_single,
+                           __plot_func, width or self.config.LINE_WIDTH)
+
+    def plot_avg_steps(self, explore_avg_win=0, exploit_avg_win=0, width=0):
+        def __plot_func(metrics_list, width):
+            (title, x_lable, y_label, name) = self.metrics[AVG_STEPS_METRIC]
+            self.__plot_single_metric(metrics_list, title, AVG_STEPS_ATTRIBUTE,
                                       x_lable, y_label, name, explore_avg_win, exploit_avg_win, width)
         self.__plot_metric(self.__get_metric_record_single,
                            __plot_func, width or self.config.LINE_WIDTH)
@@ -238,7 +284,7 @@ class Analyzer:
 
     def __plot(self, plot_metric_funcs, metrics_list, title, x_label, y_label, name, width):
         plt.close()
-        # plt.title(f'{title} - {self.config.FRIENDLY_ENV_NAME}',
+        plt.title(f'{title} - {self.config.FRIENDLY_ENV_NAME}')
         # fontsize=self.config.TITLE_TEXT_SIZE)
 
         for x in metrics_list:
@@ -248,7 +294,7 @@ class Analyzer:
         plt.axvline(x=len(self.__get_explore_metrics(
             metrics_list[0][1])), c='black', linestyle='dashed')
 
-        matplotlib.rcParams["legend.loc"] = 'center right'
+        matplotlib.rcParams["legend.loc"] = 'best'
         plt.legend(fontsize=self.config.LEGEND_TEXT_SIZE)
         plt.xlabel(x_label, fontsize=self.config.AXIS_TEXT_SIZE)
         plt.ylabel(y_label, fontsize=self.config.AXIS_TEXT_SIZE)
@@ -346,7 +392,8 @@ class Analyzer:
         for i in range(len(info)):
             row_test_results = []
             for j in range(len(info)):
-                result = stats.ttest_ind(info[i][1], info[j][1])
+                result = stats.ttest_ind(
+                    info[i][1], info[j][1], equal_var=False)
                 row_test_results.append(result)
 
             test_results.append(row_test_results)
@@ -440,7 +487,7 @@ class Analyzer:
             f.write(data)
 
     def __get_label(self, m):
-        if m < 0:
+        if m is int and m < 0:
             return ACS2_NAME
 
         return f'{ACS2ER_NAME} m-{m}'

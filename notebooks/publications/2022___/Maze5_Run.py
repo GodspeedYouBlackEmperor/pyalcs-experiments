@@ -1,11 +1,12 @@
 import os
+from collections import defaultdict
 from utils.run_utils import Runner
 
 import gym
 import gym_maze
 
 from lcs.agents import Agent
-from lcs.agents.acs2 import ACS2, Configuration as CFG_ACS2
+from lcs.agents.acs2 import ACS2, Configuration as CFG_ACS2, ClassifiersList
 from lcs.agents.acs2er import ACS2ER, Configuration as CFG_ACS2ER, ReplayMemory, ReplayMemorySample
 from lcs.agents.acs2rer import ACS2RER, Configuration as CFG_ACS2RER
 from lcs.metrics import population_metrics
@@ -29,12 +30,100 @@ ER_SAMPLES_NUMBER_LIST = [3]
 #######
 
 REPEAT_START = 1
-REPEAT = 1
+REPEAT = 2
 
 # Please edit if running new experiment to do not override saved results.
-EXPERIMENT_NAME = "Maze5_PER_EXP1"
+EXPERIMENT_NAME = "Maze5_PER_EXP2"
 
 runner = Runner('MAZE', EXPERIMENT_NAME, MAZE)
+
+
+MAZE_PATH = 0
+MAZE_REWARD = 9
+
+optimal_paths_env = gym.make(MAZE)
+matrix = optimal_paths_env.matrix
+X = matrix.shape[1]
+Y = matrix.shape[0]
+
+
+def get_reward_pos():
+    for i in range(Y):
+        for j in range(X):
+            if(matrix[i, j] == MAZE_REWARD):
+                return(i, j)
+
+
+def get_possible_neighbour_cords(pos_y, pos_x):
+    n = ((pos_y - 1, pos_x), 4)
+    ne = ((pos_y - 1, pos_x + 1), 5)
+    e = ((pos_y, pos_x + 1), 6)
+    se = ((pos_y + 1, pos_x + 1), 7)
+    s = ((pos_y + 1, pos_x), 0)
+    sw = ((pos_y + 1, pos_x - 1), 1)
+    w = ((pos_y, pos_x - 1), 2)
+    nw = ((pos_y - 1, pos_x - 1), 3)
+
+    return [n, ne, e, se, s, sw, w, nw]
+
+
+optimal_actions = []
+
+root_node = get_reward_pos()
+
+
+def is_included(cords, level):
+    return any(op_cords[0] == cords[0] and op_cords[1] == cords[1] and level != op_level for op_cords, _, op_level in optimal_actions)
+
+
+def get_optimal_actions_to(node, level):
+    neighbour_cords = get_possible_neighbour_cords(node[0], node[1])
+
+    next_level_cords = []
+    for (pos_y, pos_x), action in neighbour_cords:
+        if (not is_included((pos_y, pos_x), level)) and matrix[pos_y, pos_x] == MAZE_PATH:
+            optimal_actions.append(((pos_y, pos_x), action, level))
+            next_level_cords.append((pos_y, pos_x))
+
+    return next_level_cords
+
+
+LEVEL = 0
+next_level_cords = get_optimal_actions_to(root_node, LEVEL)
+
+while len(next_level_cords) > 0:
+    LEVEL += 1
+    new_next_level_cords = []
+    for nlc in next_level_cords:
+        new_next_level_cords += get_optimal_actions_to(nlc, LEVEL)
+
+    next_level_cords = new_next_level_cords
+
+positions_actions = defaultdict(set)
+for cords, a, _ in optimal_actions:
+    positions_actions[cords].add(a)
+
+positions_actions = positions_actions.items()
+POSITIONS_OPTIMAL_ACTIONS = list(map(lambda pa: (
+    optimal_paths_env.env.maze.perception(pa[0]), list(pa[1])), positions_actions))
+POSITIONS_OPTIMAL_ACTIONS_LENGTH = len(POSITIONS_OPTIMAL_ACTIONS)
+
+
+def _maze_optimal(classifiers) -> float:
+    nr_correct = 0
+
+    for p0, optimal_actions_list in POSITIONS_OPTIMAL_ACTIONS:
+        match_set = classifiers.form_match_set(p0)
+        cl = match_set.get_best_classifier()
+
+        if cl is not None and optimal_actions_list.count(cl.action) > 0:
+            nr_correct += 1
+
+    return nr_correct / POSITIONS_OPTIMAL_ACTIONS_LENGTH * 100.0
+
+
+def _maze_optimal_reliable(classifiers) -> float:
+    return _maze_optimal(ClassifiersList(*[c for c in classifiers if c.is_reliable()]))
 
 
 def _get_transitions():
@@ -77,7 +166,9 @@ def _maze_metrics(agent, env):
     pop = agent.population
     metrics = {
         'knowledge': _maze_knowledge(pop),
-        "specificity": _maze_specificity(agent.population)
+        "specificity": _maze_specificity(agent.population),
+        "optimal": _maze_optimal(agent.population),
+        "optimal_reliable": _maze_optimal_reliable(agent.population)
     }
     metrics.update(population_metrics(pop, env))
 
