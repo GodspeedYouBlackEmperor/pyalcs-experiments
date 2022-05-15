@@ -17,7 +17,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-BITS = 20  # 6 | 11 | 20 | 37
+BITS = 37  # 6 | 11 | 20 | 37
 MPX = f'boolean-multiplexer-{BITS}bit-v0'
 EXPLORE_TRIALS = 25000
 EXPLOIT_TRIALS = 5000
@@ -39,7 +39,7 @@ REPEAT_START = 1
 REPEAT = 1
 
 # Please edit if running new experiment to do not override saved results.
-EXPERIMENT_NAME = "MPX20_PER_EXP2"
+EXPERIMENT_NAME = "MPX37_PER_EXP2"
 
 
 runner = Runner('MPX', EXPERIMENT_NAME, MPX)
