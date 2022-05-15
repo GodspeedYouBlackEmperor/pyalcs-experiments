@@ -178,14 +178,14 @@ def _weight_func_reward(rm: ReplayMemory, sample: ReplayMemorySample):
     if(sample.reward == 0):
         return 1
 
-    return 5
+    return 10
 
 
 def _weight_func_unique(rm: ReplayMemory, sample: ReplayMemorySample):
     existing_count = sum(1 for s in rm if sample.state == s.state and sample.action ==
                          s.action and sample.reward == s.reward and sample.next_state == s.next_state and sample.done == s.done)
 
-    return 1 / (existing_count * 2 + 1)
+    return 1 / (existing_count + 1)
 
 
 def _weight_func_unique_reward(rm: ReplayMemory, sample: ReplayMemorySample):
@@ -333,4 +333,4 @@ run_acs2er_experiments()
 run_acs2per_experiments()
 run_acs2per2_experiments()
 run_acs2per3_experiments()
-run_acs2rer_experiments()
+# run_acs2rer_experiments()
