@@ -2,17 +2,30 @@ import os
 import dill
 from lcs.agents import Agent
 
+
 class Runner:
     def __init__(self, BASE_NAME, EXP_NAME, ENV_NAME, DATA_BASE_PATH='') -> None:
-        self.DATA_PATH = os.path.join(DATA_BASE_PATH, BASE_NAME, EXP_NAME, ENV_NAME)
+        self.DATA_PATH = os.path.join(
+            DATA_BASE_PATH, BASE_NAME, EXP_NAME, ENV_NAME)
 
-    def run_experiment(self, agent: Agent, env, explore_trials, exploit_trials, data_path = ''):
+    def run_experiment(self, agent: Agent, env, explore_trials, exploit_trials, data_path=''):
         # Explore the environment
         explore_metrics = agent.explore(env, explore_trials)
         # Exploit the environment
         exploit_metrics = agent.exploit(env, exploit_trials)
 
-        self.__save_experiment_data(agent, env, explore_metrics, exploit_metrics, data_path)
+        self.__save_experiment_data(
+            agent, env, explore_metrics, exploit_metrics, data_path)
+
+    def run_experiment_explore_exploit(self, agent: Agent, env, trials, data_path=''):
+        # Explore and Exploit the environment
+        metrics = agent.explore_exploit(env, trials)
+
+        explore_metrics = metrics[1::2]
+        exploit_metrics = metrics[::2]
+
+        self.__save_experiment_data(
+            agent, env, explore_metrics, exploit_metrics, data_path)
 
     def __save_data(self, data, path, file_name):
         full_dir_path = os.path.join(self.DATA_PATH, path)
@@ -23,7 +36,11 @@ class Runner:
         dill.dump(data, open(full_file_path, 'wb'))
 
     def __save_agent_data(self, agent, data, path, file_name):
-        path = os.path.join(type(agent).__name__, path)
+        agent_name = type(agent).__name__
+        if agent_name != 'ACS2':
+            agent_name = 'ACS2ER'
+
+        path = os.path.join(agent_name, path)
         self.__save_data(data, path, file_name)
 
     def __save_metrics(self, agent, metrics, path, metrics_name):
@@ -36,11 +53,12 @@ class Runner:
         self.__save_metrics(agent, metrics, path, 'EXPLOIT')
 
     def __save_population(self, agent: Agent, path):
-        self.__save_agent_data(agent, agent.get_population(), path, 'population')
+        self.__save_agent_data(
+            agent, agent.get_population(), path, 'population')
 
     def __save_environment(self, agent, env, path):
         self.__save_agent_data(agent, env, path, 'env')
-        
+
     def __save_experiment_data(self, agent, env, explore_metrics, exploit_metrics, path):
         self.__save_explore_metrics(agent, explore_metrics, path)
         self.__save_exploit_metrics(agent, exploit_metrics, path)
