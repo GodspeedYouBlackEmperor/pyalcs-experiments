@@ -8,7 +8,8 @@ import gym_maze
 from lcs.agents import Agent
 from lcs.agents.acs2 import ACS2, Configuration as CFG_ACS2, ClassifiersList
 from lcs.agents.acs2er import ACS2ER, Configuration as CFG_ACS2ER, ReplayMemory, ReplayMemorySample
-from lcs.agents.acs2rer import ACS2RER, Configuration as CFG_ACS2RER
+from lcs.agents.acs2eer import ACS2EER, Configuration as CFG_ACS2EER, TrialReplayMemory
+from lcs.agents.acs2rer import ACS2RER, Configuration as CFG_ACS2RER, TrialReplayMemory
 from lcs.metrics import population_metrics
 
 # Logger
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 MAZE = "Maze7-v0"
 EXPLORE_TRIALS = 3000
 EXPLOIT_TRIALS = 500
+EXPLORE_EXPLOIT_TRIALS = 6000
 
 # The size of ER replay memory buffer
 ER_BUFFER_SIZE = 10000
@@ -33,9 +35,10 @@ REPEAT_START = 1
 REPEAT = 2
 
 # Please edit if running new experiment to do not override saved results.
-EXPERIMENT_NAME = "Maze7_PER_EXP2"
+EXPERIMENT_NAME = "Maze7_EER_EXP1"
 
 runner = Runner('MAZE', EXPERIMENT_NAME, MAZE)
+
 
 MAZE_PATH = 0
 MAZE_REWARD = 9
@@ -174,27 +177,52 @@ def _maze_metrics(agent, env):
     return metrics
 
 
-def _weight_func_reward(rm: ReplayMemory, sample: ReplayMemorySample):
-    if(sample.reward == 0):
+def _are_samples_equal(s1: ReplayMemory, s2: ReplayMemorySample):
+    return s1.state == s2.state and s1.action == s2.action and s1.reward == s2.reward and s1.next_state == s2.next_state and s1.done == s2.done
+
+
+def _are_trials_equal(t1: TrialReplayMemory, t2: TrialReplayMemory):
+    if len(t1) != len(t2):
+        return False
+
+    for i in range(len(t1)):
+        if not _are_samples_equal(t1[i], t2[i]):
+            return False
+
+    return True
+
+
+def _are_trials_equal_reverted(t1: TrialReplayMemory, t2: TrialReplayMemory):
+    if len(t1) != len(t2):
+        return False
+
+    for i in range(1, len(t1) + 1):
+        if not _are_samples_equal(t1[-i], t2[-i]):
+            return False
+
+    return True
+
+
+def _eer_weight_func_reward(rm: ReplayMemory, sample: TrialReplayMemory):
+    if(sample[-1].reward == 0):
         return 1
 
     return 10
 
 
-def _weight_func_unique(rm: ReplayMemory, sample: ReplayMemorySample):
-    existing_count = sum(1 for s in rm if sample.state == s.state and sample.action ==
-                         s.action and sample.reward == s.reward and sample.next_state == s.next_state and sample.done == s.done)
+def _eer_weight_func_unique(rm: ReplayMemory, sample: TrialReplayMemory):
+    existing_count = sum(1 for s in rm if _are_trials_equal(sample, s))
 
-    return 1 / (existing_count + 1)
+    return 1 / (existing_count * 4 + 1)
 
 
-def _weight_func_unique_reward(rm: ReplayMemory, sample: ReplayMemorySample):
-    return _weight_func_reward(rm, sample) * _weight_func_unique(rm, sample)
+def _eer_weight_func_unique_reward(rm: ReplayMemory, sample: TrialReplayMemory):
+    return _eer_weight_func_reward(rm, sample) * _eer_weight_func_unique(rm, sample)
 
 
 def _run_experiment(agent, path):
-    runner.run_experiment(agent, gym.make(
-        MAZE), EXPLORE_TRIALS, EXPLOIT_TRIALS, path)
+    runner.run_experiment_explore_exploit(
+        agent, gym.make(MAZE), EXPLORE_EXPLOIT_TRIALS, path)
 
 
 def run_acs2_experiment():
@@ -233,79 +261,25 @@ def run_acs2er_experiments():
         print(f"END - ACS2ER - {er_samples_number}")
 
 
-def _run_acs2per_experiment(er_samples_number: int):
+def _run_experiment(agent, path):
+    runner.run_experiment(agent, gym.make(
+        MAZE), EXPLORE_TRIALS, EXPLOIT_TRIALS, path)
+
+
+def run_acs2_experiment():
     for i in range(REPEAT_START, REPEAT_START + REPEAT):
         # Create agent
-        cfg = CFG_ACS2ER(
+        cfg = CFG_ACS2(
             classifier_length=8,
             number_of_possible_actions=8,
             metrics_trial_frequency=1,
-            er_buffer_size=ER_BUFFER_SIZE,
-            er_min_samples=ER_BUFFER_MIN_SAMPLES,
-            er_samples_number=er_samples_number,
-            er_weight_function=_weight_func_reward,
             user_metrics_collector_fcn=_maze_metrics)
-        agent = ACS2ER(cfg)
+        agent = ACS2(cfg)
 
-        _run_experiment(agent, os.path.join(f'm_3-pER_reward', f'{i}'))
-
-
-def run_acs2per_experiments():
-    for er_samples_number in ER_SAMPLES_NUMBER_LIST:
-        print(f"START - ACS2pER - reward")
-        _run_acs2per_experiment(er_samples_number)
-        print(f"END - ACS2pER - reward")
+    _run_experiment(agent, f'{i}')
 
 
-def _run_acs2per2_experiment(er_samples_number: int):
-    for i in range(REPEAT_START, REPEAT_START + REPEAT):
-        # Create agent
-        cfg = CFG_ACS2ER(
-            classifier_length=8,
-            number_of_possible_actions=8,
-            metrics_trial_frequency=1,
-            er_buffer_size=ER_BUFFER_SIZE,
-            er_min_samples=ER_BUFFER_MIN_SAMPLES,
-            er_samples_number=er_samples_number,
-            er_weight_function=_weight_func_unique,
-            user_metrics_collector_fcn=_maze_metrics)
-        agent = ACS2ER(cfg)
-
-        _run_experiment(agent, os.path.join(f'm_3-pER_unique', f'{i}'))
-
-
-def run_acs2per2_experiments():
-    for er_samples_number in ER_SAMPLES_NUMBER_LIST:
-        print(f"START - ACS2pER - unique")
-        _run_acs2per2_experiment(er_samples_number)
-        print(f"END - ACS2pER - unique")
-
-
-def _run_acs2per3_experiment(er_samples_number: int):
-    for i in range(REPEAT_START, REPEAT_START + REPEAT):
-        # Create agent
-        cfg = CFG_ACS2ER(
-            classifier_length=8,
-            number_of_possible_actions=8,
-            metrics_trial_frequency=1,
-            er_buffer_size=ER_BUFFER_SIZE,
-            er_min_samples=ER_BUFFER_MIN_SAMPLES,
-            er_samples_number=er_samples_number,
-            er_weight_function=_weight_func_unique_reward,
-            user_metrics_collector_fcn=_maze_metrics)
-        agent = ACS2ER(cfg)
-
-        _run_experiment(agent, os.path.join(f'm_3-pER_unique_reward', f'{i}'))
-
-
-def run_acs2per3_experiments():
-    for er_samples_number in ER_SAMPLES_NUMBER_LIST:
-        print(f"START - ACS2pER - unique + reward")
-        _run_acs2per3_experiment(er_samples_number)
-        print(f"END - ACS2pER - unique + reward")
-
-
-def _run_acs2rer_experiment(er_samples_number: int):
+def _run_acs2er_experiment(er_samples_number: int):
     for i in range(REPEAT_START, REPEAT_START + REPEAT):
         # Create agent
         cfg = CFG_ACS2ER(
@@ -318,19 +292,82 @@ def _run_acs2rer_experiment(er_samples_number: int):
             user_metrics_collector_fcn=_maze_metrics)
         agent = ACS2ER(cfg)
 
-        _run_experiment(agent, os.path.join(f'm_3-RER', f'{i}'))
+        _run_experiment(agent, os.path.join(f'm_3-ER', f'{i}'))
 
 
-def run_acs2rer_experiments():
+def _run_acs2eer_experiment(er_samples_number: int):
+    for i in range(REPEAT_START, REPEAT_START + REPEAT):
+        # Create agent
+        cfg = CFG_ACS2EER(
+            classifier_length=8,
+            number_of_possible_actions=8,
+            metrics_trial_frequency=1,
+            er_buffer_size=ER_BUFFER_SIZE,
+            er_min_samples=int(ER_BUFFER_MIN_SAMPLES / 20),
+            er_samples_number=er_samples_number,
+            user_metrics_collector_fcn=_maze_metrics)
+        agent = ACS2EER(cfg)
+
+        _run_experiment(agent, os.path.join(f'm_3-EER', f'{i}'))
+
+
+def run_acs2eer_experiments():
     for er_samples_number in ER_SAMPLES_NUMBER_LIST:
-        print(f"START - ACS2ER - {er_samples_number}")
-        _run_acs2rer_experiment(er_samples_number)
-        print(f"END - ACS2ER - {er_samples_number}")
+        print(f"START - ACS2EER - {er_samples_number}")
+        _run_acs2eer_experiment(er_samples_number)
+        print(f"END - ACS2EER - {er_samples_number}")
+
+
+def _run_acs2peer_experiment(er_samples_number: int):
+    for i in range(REPEAT_START, REPEAT_START + REPEAT):
+        # Create agent
+        cfg = CFG_ACS2EER(
+            classifier_length=8,
+            number_of_possible_actions=8,
+            metrics_trial_frequency=1,
+            er_buffer_size=ER_BUFFER_SIZE,
+            er_min_samples=int(ER_BUFFER_MIN_SAMPLES / 20),
+            er_samples_number=er_samples_number,
+            er_weight_function=_eer_weight_func_reward,
+            user_metrics_collector_fcn=_maze_metrics)
+        agent = ACS2EER(cfg)
+
+        _run_experiment(agent, os.path.join(f'm_3-EER_reward', f'{i}'))
+
+
+def run_acs2peer_experiments():
+    for er_samples_number in ER_SAMPLES_NUMBER_LIST:
+        print(f"START - ACS2EER - reward - {er_samples_number}")
+        _run_acs2peer_experiment(er_samples_number)
+        print(f"END - ACS2EER - reward - {er_samples_number}")
+
+
+def _run_acs2peer2_experiment(er_samples_number: int):
+    for i in range(REPEAT_START, REPEAT_START + REPEAT):
+        # Create agent
+        cfg = CFG_ACS2EER(
+            classifier_length=8,
+            number_of_possible_actions=8,
+            metrics_trial_frequency=1,
+            er_buffer_size=ER_BUFFER_SIZE,
+            er_min_samples=int(ER_BUFFER_MIN_SAMPLES / 20),
+            er_samples_number=er_samples_number,
+            er_weight_function=_eer_weight_func_unique_reward,
+            user_metrics_collector_fcn=_maze_metrics)
+        agent = ACS2EER(cfg)
+
+        _run_experiment(agent, os.path.join(f'm_3-EER_reward-unique', f'{i}'))
+
+
+def run_acs2peer2_experiments():
+    for er_samples_number in ER_SAMPLES_NUMBER_LIST:
+        print(f"START - ACS2EER - reward - unique - {er_samples_number}")
+        _run_acs2peer2_experiment(er_samples_number)
+        print(f"END - ACS2EER - reward - {er_samples_number}")
 
 
 run_acs2_experiment()
 run_acs2er_experiments()
-run_acs2per_experiments()
-run_acs2per2_experiments()
-run_acs2per3_experiments()
-# run_acs2rer_experiments()
+run_acs2eer_experiments()
+run_acs2peer_experiments()
+run_acs2peer2_experiments()
