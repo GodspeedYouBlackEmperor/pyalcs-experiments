@@ -35,7 +35,7 @@ REPEAT_START = 1
 REPEAT = 2
 
 # Please edit if running new experiment to do not override saved results.
-EXPERIMENT_NAME = "Maze5_EER_EXP1"
+EXPERIMENT_NAME = "Maze5_EER_EXP2"
 
 runner = Runner('MAZE', EXPERIMENT_NAME, MAZE)
 
@@ -261,40 +261,6 @@ def run_acs2er_experiments():
         print(f"END - ACS2ER - {er_samples_number}")
 
 
-def _run_experiment(agent, path):
-    runner.run_experiment(agent, gym.make(
-        MAZE), EXPLORE_TRIALS, EXPLOIT_TRIALS, path)
-
-
-def run_acs2_experiment():
-    for i in range(REPEAT_START, REPEAT_START + REPEAT):
-        # Create agent
-        cfg = CFG_ACS2(
-            classifier_length=8,
-            number_of_possible_actions=8,
-            metrics_trial_frequency=1,
-            user_metrics_collector_fcn=_maze_metrics)
-        agent = ACS2(cfg)
-
-    _run_experiment(agent, f'{i}')
-
-
-def _run_acs2er_experiment(er_samples_number: int):
-    for i in range(REPEAT_START, REPEAT_START + REPEAT):
-        # Create agent
-        cfg = CFG_ACS2ER(
-            classifier_length=8,
-            number_of_possible_actions=8,
-            metrics_trial_frequency=1,
-            er_buffer_size=ER_BUFFER_SIZE,
-            er_min_samples=ER_BUFFER_MIN_SAMPLES,
-            er_samples_number=er_samples_number,
-            user_metrics_collector_fcn=_maze_metrics)
-        agent = ACS2ER(cfg)
-
-        _run_experiment(agent, os.path.join(f'm_3-ER', f'{i}'))
-
-
 def _run_acs2eer_experiment(er_samples_number: int):
     for i in range(REPEAT_START, REPEAT_START + REPEAT):
         # Create agent
@@ -369,5 +335,5 @@ def run_acs2peer2_experiments():
 run_acs2_experiment()
 run_acs2er_experiments()
 run_acs2eer_experiments()
-run_acs2peer_experiments()
-run_acs2peer2_experiments()
+# run_acs2peer_experiments()
+# run_acs2peer2_experiments()
