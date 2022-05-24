@@ -230,8 +230,8 @@ class Analyzer:
                               attribute_name, label, explore_color, exploit_color, width, marker)
 
     def __plot_attribute(self, explore_metrics_func, exploit_metrics_func, metrics, attribute_name: str, label: str, explore_color: str, exploit_color: str, width: float, marker: str):
-        explore = self.__get_explore_metrics(metrics)
-        exploit = self.__get_exploit_metrics(metrics)
+        explore = self.__get_explore_metrics(metrics)  # .iloc[0:100]
+        exploit = self.__get_exploit_metrics(metrics)  # .iloc[0:100]
 
         x_axis_explore = range(1, len(explore) + 1)
         x_axis_exploit = range(
@@ -291,8 +291,8 @@ class Analyzer:
             for f in plot_metric_funcs:
                 f(x, width)
 
-        plt.axvline(x=len(self.__get_explore_metrics(
-            metrics_list[0][1])), c='black', linestyle='dashed')
+        # plt.axvline(x=len(self.__get_explore_metrics(
+        #    metrics_list[0][1])), c='black', linestyle='dashed')
 
         matplotlib.rcParams["legend.loc"] = 'best'
         plt.legend(fontsize=self.config.LEGEND_TEXT_SIZE)
@@ -359,6 +359,12 @@ class Analyzer:
         # exploit = self.__get_exploit_metrics(metrics)
         return self.__get_steps_average(explore)
 
+    def __get_exploit_metrics_steps_average(self, metrics, start_index, end_index):
+        explore = self.__get_exploit_metrics(
+            metrics).iloc[start_index:end_index]
+        # exploit = self.__get_exploit_metrics(metrics)
+        return self.__get_steps_average(explore)
+
     def __get_explore_metrics_reward_average(self, metrics):
         explore = self.__get_explore_metrics(
             metrics)
@@ -399,6 +405,25 @@ class Analyzer:
             test_results.append(row_test_results)
         self.cache_data(info, 'steps')
         self.__print_results([i[0] for i in info], test_results, 'steps_ttest')
+
+    def compare_steps_exploit_average_welch_test(self, start_index, end_index):
+        info = self.__get_metric_information(
+            lambda met: self.__get_exploit_metrics_steps_average(met, start_index, end_index))
+
+        self.__save_info_mean_to_csv(info, 'steps_exploit')
+        test_results = []
+
+        for i in range(len(info)):
+            row_test_results = []
+            for j in range(len(info)):
+                result = stats.ttest_ind(
+                    info[i][1], info[j][1], equal_var=False)
+                row_test_results.append(result)
+
+            test_results.append(row_test_results)
+        self.cache_data(info, 'steps_exploit')
+        self.__print_results([i[0] for i in info],
+                             test_results, 'steps__exploit_ttest')
 
     def compare_reward_exploit_average_welch_test(self):
         info = self.__get_metric_information(
